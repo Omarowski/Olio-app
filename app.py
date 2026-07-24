@@ -253,10 +253,11 @@ if st.sidebar.button(
 # Tabs
 # ---------------------------------------------------------
 
-dashboard_tab, edit_tab = st.tabs(
+dashboard_tab, edit_tab, new_client_tab = st.tabs(
     [
         "Dashboard",
         "Modifica dati",
+        "Aggiungi cliente"
     ]
 )
 
@@ -471,3 +472,100 @@ with edit_tab:
             )
 
             st.exception(error)
+
+PRICE_PER_UNIT = 330
+
+with new_client_tab:
+    st.subheader("Aggiungi un nuovo cliente")
+
+    # Show the saved message after rerun
+    if "new_client_success" in st.session_state:
+        st.success(st.session_state.pop("new_client_success"))
+
+    # Reset fields before widgets are created
+    if st.session_state.get("reset_new_client_form", False):
+        st.session_state["new_client_quantity"] = 0
+        st.session_state["new_client_name"] = ""
+        st.session_state["new_client_phone"] = ""
+        st.session_state["reset_new_client_form"] = False
+
+    new_quantity = st.number_input(
+        "Quantità",
+        min_value=0,
+        step=1,
+        key="new_client_quantity",
+    )
+
+    new_amount = new_quantity * PRICE_PER_UNIT
+
+    st.metric(
+        "Importo",
+        f"{new_amount:,.0f} zł",
+    )
+
+    with st.form("new_client_form"):
+        new_name = st.text_input(
+            "Nome",
+            key="new_client_name",
+        )
+
+        new_phone = st.text_input(
+            "Numero di telefono",
+            key="new_client_phone",
+        )
+
+        submitted = st.form_submit_button(
+            "Aggiungi cliente",
+            type="primary",
+            use_container_width=True,
+        )
+
+    if submitted:
+        if not new_name.strip():
+            st.error("Il nome è obbligatorio.")
+
+        elif new_quantity <= 0:
+            st.error(
+                "La quantità deve essere maggiore di zero."
+            )
+
+        else:
+            try:
+                new_row = {
+                    column: ""
+                    for column in original_df.columns
+                }
+
+                new_row["Nome"] = new_name.strip()
+                new_row["Quantita'"] = new_quantity
+                new_row["Importo"] = f"{new_amount:.0f} zł"
+                new_row["NUMERO DI TELEFONO"] = new_phone.strip()
+
+                updated_df = pd.concat(
+                    [
+                        original_df,
+                        pd.DataFrame([new_row]),
+                    ],
+                    ignore_index=True,
+                )
+
+                save_data(
+                    worksheet,
+                    updated_df,
+                )
+
+                # Store message so it appears after rerun
+                st.session_state["new_client_success"] = (
+                    f"'{new_name}' e' stato aggiunto "
+                    # f"con importo di {new_amount:,.0f} zł."
+                )
+
+                st.session_state["reset_new_client_form"] = True
+
+                st.rerun()
+
+            except Exception as error:
+                st.error(
+                    "Errore durante l'aggiunta del cliente."
+                )
+                st.exception(error)
