@@ -323,7 +323,7 @@ with dashboard_tab:
     )
 
     chart_df = (
-        filtered_df
+        dashboard_df
         .groupby(
             "Nome",
             as_index=False,
@@ -335,35 +335,29 @@ with dashboard_tab:
         )
     )
 
-    if chart_df.empty:
-        st.info(
-            "Non ci sono dati da visualizzare "
-            "con i filtri selezionati."
-        )
 
-    else:
-        fig, ax = plt.subplots(
+    fig, ax = plt.subplots(
             figsize=(12, 8)
         )
 
-        ax.bar(
+    ax.bar(
             chart_df["Nome"],
             chart_df["Quantita'"],
         )
 
-        ax.set_ylim(bottom=0)
-        ax.set_xlabel("Nome")
-        ax.set_ylabel("Quantità")
-        ax.tick_params(
+    ax.set_ylim(bottom=0)
+    ax.set_xlabel("Nome")
+    ax.set_ylabel("Quantità")
+    ax.tick_params(
             axis="x",
             rotation=90,
-        )
+    )
 
-        fig.tight_layout()
+    fig.tight_layout()
 
-        st.pyplot(fig)
+    st.pyplot(fig)
 
-        plt.close(fig)
+    plt.close(fig)
 
 
 # ---------------------------------------------------------
