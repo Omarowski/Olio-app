@@ -301,12 +301,27 @@ with dashboard_tab:
         width="stretch",
         hide_index=True,
     )
+    filtered_df["Importo_num"] = (
+        filtered_df["Importo"]
+        .astype(str)
+        .str.replace("zł", "", regex=False)
+        .str.replace(",", "", regex=False)   # remove thousands separator
+        .str.strip()
+    )
 
+    filtered_df["Importo_num"] = pd.to_numeric(
+        filtered_df["Importo_num"],
+        errors="coerce",
+    ).fillna(0)
+
+
+    total_amount = filtered_df["Importo_num"].sum()
     total_quantity = filtered_df["Quantita'"].sum()
     number_of_customers = filtered_df["Nome"].nunique()
+    
 
-    metric_col_1, metric_col_2 = st.columns(2)
-
+    metric_col_1, metric_col_2, metric_col_3 = st.columns(3)
+    # print(total_amount.dtypes)
     with metric_col_1:
         st.metric(
             "Quantità totale",
@@ -318,7 +333,11 @@ with dashboard_tab:
             "Numero di clienti",
             number_of_customers,
         )
-
+    with metric_col_3:
+        st.metric(
+            "Importo totale",
+            f"{total_amount:,.0f} zł",
+        )
     st.subheader(
         "Quantità venduta per nome"
     )
