@@ -10,7 +10,7 @@ from google.oauth2.service_account import Credentials
 # ---------------------------------------------------------
 
 SPREADSHEET_ID = "1vtMaTt1ujTEjPNrfHhMOm4VS1D8FJP5dpT3mrjVaqRI"
-WORKSHEET_ID = 0
+# WORKSHEET_ID = 0  
 
 REQUIRED_COLUMNS = [
     "Nome",
@@ -25,7 +25,7 @@ REQUIRED_COLUMNS = [
 # ---------------------------------------------------------
 
 @st.cache_resource
-def get_worksheet():
+def get_spreadsheet():
     """
     Connect to the Google spreadsheet and return the worksheet
     whose gid is 0.
@@ -43,16 +43,17 @@ def get_worksheet():
 
     client = gspread.authorize(credentials)
 
-    spreadsheet = client.open_by_key(SPREADSHEET_ID)
+    # spreadsheet = client.open_by_key(SPREADSHEET_ID)  
 
-    worksheet = spreadsheet.get_worksheet_by_id(WORKSHEET_ID)
+    # worksheet = spreadsheet.get_worksheet_by_name(WORKSHEET_ID)
+    # worskeet = spredsheet.get_worksheet_by_name("Foglio1")
 
-    if worksheet is None:
-        raise ValueError(
-            f"Non è stato trovato il foglio con ID {WORKSHEET_ID}."
-        )
+    # if worksheet is None:
+    #     raise ValueError(
+    #         f"Non è stato trovato il foglio con ID {WORKSHEET_ID}."
+    #     )
 
-    return worksheet
+    return client.open_by_key(SPREADSHEET_ID)
 
 
 # ---------------------------------------------------------
@@ -195,7 +196,22 @@ st.title("🫒 Olio Venduto 24_25")
 # ---------------------------------------------------------
 
 try:
-    worksheet = get_worksheet()
+    # worksheet = get_worksheet()
+    # original_df = load_data(worksheet)
+    spreadsheet = get_spreadsheet()
+
+    worksheet_names = [
+        ws.title
+        for ws in spreadsheet.worksheets()
+    ]
+
+    selected_sheet = st.sidebar.selectbox(
+        "📄 Seleziona la Tab per verificare i dati",
+        worksheet_names,
+    )
+
+    worksheet = spreadsheet.worksheet(selected_sheet)
+
     original_df = load_data(worksheet)
 
 except Exception as error:
@@ -239,7 +255,7 @@ st.sidebar.header("Informazioni")
 # )
 
 st.sidebar.write(
-    f"Worksheet ID: **{worksheet.id}**"
+    f"Nome Worksheet: **{worksheet.title}**"
 )
 
 if st.sidebar.button(
