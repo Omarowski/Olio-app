@@ -183,12 +183,12 @@ def prepare_dashboard_data(dataframe):
 # ---------------------------------------------------------
 
 st.set_page_config(
-    page_title="Olio Venduto 24_25",
+    page_title="Olio Venduto {}",
     page_icon="🫒",
     layout="wide",
 )
 
-st.title("🫒 Olio Venduto 24_25")
+
 
 
 # ---------------------------------------------------------
@@ -243,6 +243,7 @@ if missing_columns:
 
 dashboard_df = prepare_dashboard_data(original_df)
 
+st.title(f"🫒 Olio Venduto {worksheet.title}")
 
 # ---------------------------------------------------------
 # Sidebar
