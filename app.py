@@ -234,9 +234,9 @@ dashboard_df = prepare_dashboard_data(original_df)
 
 st.sidebar.header("Informazioni")
 
-st.sidebar.write(
-    f"Foglio collegato: **{worksheet.title}**"
-)
+# st.sidebar.write(
+#     f"Foglio collegato: **{worksheet.title}**"
+# )
 
 st.sidebar.write(
     f"Worksheet ID: **{worksheet.id}**"
@@ -321,7 +321,7 @@ with dashboard_tab:
     
 
     metric_col_1, metric_col_2, metric_col_3 = st.columns(3)
-    # print(total_amount.dtypes)
+    # print(total_amount.dtype)
     with metric_col_1:
         st.metric(
             "Quantità totale",
