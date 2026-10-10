@@ -1,9 +1,6 @@
-
 import streamlit as st
-import pandas as pd
 
-from config import PRICE_PER_UNIT
-from services.google_sheets import save_data
+from components.sales.sales_dashboard import get_price
 
 
 @st.fragment
@@ -11,7 +8,16 @@ def show_add_client(worksheet, original_df):
 
     st.subheader("Aggiungi un nuovo cliente")
 
-    # 1. Create unique keys for each worksheet
+    # Get the current unit price from Google Sheets
+    try:
+        spreadsheet = worksheet.spreadsheet
+        price_per_unit = get_price(spreadsheet)
+    except Exception as error:
+        st.error("Impossibile recuperare il prezzo unitario.")
+        st.exception(error)
+        return
+
+    # Unique keys for each worksheet
     prefix = str(worksheet.id)
 
     quantity_key = f"new_client_quantity_{prefix}"
@@ -21,23 +27,20 @@ def show_add_client(worksheet, original_df):
     success_key = f"client_saved_{prefix}"
     reset_key = f"reset_client_form_{prefix}"
 
-    # 2. Reset fields BEFORE creating the widgets
+    # Reset fields before creating widgets
     if st.session_state.get(reset_key, False):
         st.session_state[name_key] = ""
         st.session_state[phone_key] = ""
         st.session_state[quantity_key] = 0
-
         st.session_state[reset_key] = False
 
-    # 3. Display the previous success message
+    # Display success message
     saved_client = st.session_state.get(success_key)
 
     if saved_client:
-        st.success(
-            f"Cliente {saved_client} aggiunto con successo!"
-        )
+        st.success(f"Cliente {saved_client} aggiunto con successo!")
 
-    # 4. Input fields
+    # Input quantity
     new_quantity = st.number_input(
         "Quantità",
         min_value=0,
@@ -45,25 +48,16 @@ def show_add_client(worksheet, original_df):
         key=quantity_key,
     )
 
-    # 5. Calculate the amount automatically
-    new_amount = new_quantity * PRICE_PER_UNIT
+    # Calculate amount for display
+    new_amount = new_quantity * price_per_unit
 
-    st.metric(
-        "Importo",
-        f"{new_amount:,.0f} zł",
-    )
+    st.metric("Importo", f"{new_amount:,.2f} zł")
 
-    new_name = st.text_input(
-        "Nome",
-        key=name_key,
-    )
+    # Input client details
+    new_name = st.text_input("Nome", key=name_key)
+    new_phone = st.text_input("Numero di telefono", key=phone_key)
 
-    new_phone = st.text_input(
-        "Numero di telefono",
-        key=phone_key,
-    )
-
-    # 6. Save the client when the button is clicked
+    # Add client
     if st.button(
         "Aggiungi cliente",
         type="primary",
@@ -71,53 +65,46 @@ def show_add_client(worksheet, original_df):
         key=f"add_client_{prefix}",
     ):
 
-        # Validate the name
         if not new_name.strip():
             st.error("Il nome è obbligatorio.")
             return
 
-        # Validate the quantity
         if new_quantity <= 0:
-            st.error(
-                "La quantità deve essere maggiore di zero."
-            )
+            st.error("La quantità deve essere maggiore di zero.")
             return
 
         try:
-            # 7. Create a new row with all existing columns
+            # Match the existing worksheet column order
+            headers = [
+                str(header).strip()
+                for header in worksheet.row_values(1)
+            ]
+
+            # Build the new row in exactly that order
             new_row = {
-                column: ""
-                for column in original_df.columns
+                "Nome": new_name.strip(),
+                "Quantita'": new_quantity,
+                "NUMERO DI TELEFONO": new_phone.strip(),
             }
 
-            new_row["Nome"] = new_name.strip()
-            new_row["Quantita'"] = new_quantity
-            new_row["Importo"] = f"{new_amount:.0f} zł"
-            new_row["NUMERO DI TELEFONO"] = new_phone.strip()
+            # Leave Importo blank so the sheet formula calculates it
+            row_values = [
+                new_row.get(header, "")
+                for header in headers
+            ]
 
-            # 8. Append the new client to the existing data
-            updated_df = pd.concat(
-                [
-                    original_df,
-                    pd.DataFrame([new_row]),
-                ],
-                ignore_index=True,
+            # Append only the new row; do not clear or rewrite the sheet
+            worksheet.append_row(
+                row_values,
+                value_input_option="USER_ENTERED",
+                insert_data_option="INSERT_ROWS",
             )
 
-            # 9. Save the updated data to Google Sheets
-            save_data(worksheet, updated_df)
-
-            # 10. Store the success message
             st.session_state[success_key] = new_name.strip()
-
-            # 11. Schedule the fields to reset on the next run
             st.session_state[reset_key] = True
 
-            # 12. Rerun the app
             st.rerun()
 
         except Exception as error:
-            st.error(
-                "Errore durante l'aggiunta del cliente."
-            )
+            st.error("Errore durante l'aggiunta del cliente.")
             st.exception(error)
