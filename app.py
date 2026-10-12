@@ -161,7 +161,7 @@ with edit_tab:
 with add_tab:
     show_add_client(
         venduto_worksheet,
-        original_df,
+        # original_df,
     )
 
 

@@ -4,7 +4,7 @@ from components.sales.sales_dashboard import get_price
 
 
 @st.fragment
-def show_add_client(worksheet, original_df):
+def show_add_client(worksheet):
 
     st.subheader("Aggiungi un nuovo cliente")
 

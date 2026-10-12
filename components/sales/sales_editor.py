@@ -1,8 +1,8 @@
 import streamlit as st
 import gspread
 
-from services.google_sheets import save_data
 from utils.data import validate_columns
+
 
 @st.fragment
 def show_sales_editor(
@@ -11,13 +11,12 @@ def show_sales_editor(
     required_columns,
 ):
 
-    st.subheader(
-        "Modifica il Google Sheet"
-    )
+    st.subheader("Modifica il Google Sheet")
 
     st.info(
         "Modifica i valori nella tabella e premi "
-        "“Salva modifiche”."
+        "“Salva modifiche”. La colonna Importo è "
+        "sola lettura perché contiene una formula."
     )
 
     edited_df = st.data_editor(
@@ -25,25 +24,24 @@ def show_sales_editor(
         num_rows="dynamic",
         width="stretch",
         hide_index=True,
-
-        # Important when changing worksheets
         key=f"sales_editor_{worksheet.id}",
-
+        disabled=["Importo"],
         column_config={
             "Nome": st.column_config.TextColumn(
                 "Nome",
                 required=True,
             ),
-            "Quantita'": st.column_config.TextColumn(
+            "Quantita'": st.column_config.NumberColumn(
                 "Quantità",
+                min_value=0,
+                step=1,
             ),
             "Importo": st.column_config.TextColumn(
                 "Importo",
             ),
-            "NUMERO DI TELEFONO":
-                st.column_config.TextColumn(
-                    "Numero di telefono",
-                ),
+            "NUMERO DI TELEFONO": st.column_config.TextColumn(
+                "Numero di telefono",
+            ),
         },
     )
 
@@ -81,29 +79,68 @@ def show_sales_editor(
             return
 
         try:
-            with st.spinner(
-                "Salvataggio..."
-            ):
-                save_data(
-                    worksheet,
-                    edited_df,
-                )
+            with st.spinner("Salvataggio..."):
 
-            st.success(
-                "Modifiche salvate."
-            )
+                # Read the actual Google Sheets headers
+                headers = [
+                    str(header).strip()
+                    for header in worksheet.row_values(1)
+                ]
 
+                # Never write to the Importo column
+                writable_columns = [
+                    col for col in headers
+                    if col.strip().lower() != "importo"
+                ]
+
+                # Match edited data to the existing sheet columns
+                missing_columns = [
+                    col for col in writable_columns
+                    if col not in edited_df.columns
+                ]
+
+                if missing_columns:
+                    st.error(
+                        "Mancano queste colonne nel modulo: "
+                        + ", ".join(missing_columns)
+                    )
+                    return
+
+                # Write each editable column separately.
+                # This preserves the Importo formula column.
+                for column in writable_columns:
+                    col_index = headers.index(column) + 1
+                    col_letter = gspread.utils.rowcol_to_a1(
+                        1, col_index
+                    )
+                    col_letter = "".join(
+                        char for char in col_letter
+                        if char.isalpha()
+                    )
+
+                    values = [
+                        [column],
+                        *[
+                            ["" if value is None else value]
+                            for value in edited_df[column].tolist()
+                        ],
+                    ]
+
+                    worksheet.update(
+                        range_name=f"{col_letter}1:{col_letter}{len(values)}",
+                        values=values,
+                        value_input_option="USER_ENTERED",
+                    )
+
+            st.success("Modifiche salvate.")
             st.rerun()
 
         except gspread.exceptions.APIError as error:
             st.error(
-                "Google Sheets ha rifiutato "
-                "il salvataggio."
+                "Google Sheets ha rifiutato il salvataggio."
             )
             st.exception(error)
 
         except Exception as error:
-            st.error(
-                "Errore durante il salvataggio."
-            )
+            st.error("Errore durante il salvataggio.")
             st.exception(error)
