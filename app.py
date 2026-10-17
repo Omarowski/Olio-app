@@ -251,7 +251,6 @@ st.header("💰 Ricavi al netto delle spese")
 show_financial_summary(
     spese_dashboard_df,
     venduto_dashboard_df,
-    stato,
 )
 
 
